@@ -1,0 +1,17 @@
+slap - simulate /slap command from IRC
+me - simulate /me command from IRC
+shrug - shrug ¯\_(ツ)_/¯
+google - <query> let me google that for you
+get - <key> get specific entry by key
+list - list entries for current chat
+set - <key> <value> set specific value for key
+del - <key> remove specific key
+pidor - play the game, see /pidorules first
+pidorules - POTD game rules
+pidoreg - register the POTD game
+pidorunreg - unregister the POTD game
+pidorstats - POTD game stats for this year
+pidorall - POTD game stats for all time
+pidorme - POTD personal stats
+credits - report issue to github repo
+meme - get meme of the day
