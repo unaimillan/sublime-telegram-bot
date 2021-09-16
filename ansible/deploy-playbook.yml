@@ -1,0 +1,11 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+  vars:
+    pip_install_packages:
+      - docker
+      - docker-compose
