@@ -9,7 +9,7 @@ from telegram.ext.filters import Filters
 
 from bot.commands import hello_cmd, echo_cmd, pin_message_cmd, slap_cmd, me_cmd, \
     unknown_command_cmd, shrug_cmd, google_cmd, get_cmd, list_cmd, set_cmd, \
-    del_cmd, credits_cmd, pidor_cmd, pidoreg_cmd, meme_cmd
+    del_cmd, credits_cmd, pidor_cmd, pidoreg_cmd, meme_cmd, pidorules_cmd
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG,
@@ -44,6 +44,8 @@ dispatch.add_handler(CommandHandler('list', list_cmd, filters=not_edited))
 dispatch.add_handler(CommandHandler('set', set_cmd, filters=not_edited))
 dispatch.add_handler(CommandHandler('del', del_cmd, filters=not_edited))
 dispatch.add_handler(CommandHandler('pidor', pidor_cmd, filters=not_edited))
+dispatch.add_handler(
+    CommandHandler('pidorules', pidorules_cmd, filters=not_edited))
 dispatch.add_handler(CommandHandler('pidoreg', pidoreg_cmd, filters=not_edited))
 updater.dispatcher.add_handler(
     MessageHandler(Filters.regex(r'^/\w+') & not_edited, unknown_command_cmd))

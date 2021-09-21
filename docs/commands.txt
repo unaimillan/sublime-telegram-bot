@@ -8,8 +8,8 @@ set - <key> <value> set specific value for key
 del - <key> remove specific key
 pidor - play the game, see /pidorules first
 pidorules - POTD game rules
-pidoreg - register the POTD game
-pidorunreg - unregister the POTD game
+pidoreg - register to the POTD game
+pidorunreg - unregister from the POTD game
 pidorstats - POTD game stats for this year
 pidorall - POTD game stats for all time
 pidorme - POTD personal stats

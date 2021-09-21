@@ -1,9 +1,8 @@
 from urllib.parse import quote as urlquote
 
-import telegram.bot
+import requests
 from telegram import Update
 from telegram.ext import CallbackContext
-import requests
 
 from bot.utils import raw_name, escape_markdown2
 
@@ -122,6 +121,25 @@ def echo_cmd(update: Update, _context: CallbackContext):
 def pidor_cmd(update: Update, _context: CallbackContext):
     update.message.reply_markdown_v2(
         r'хехе, к сожалению {} \- пидор'.format(update.message.from_user.name))
+
+
+def pidorules_cmd(update: Update, _context: CallbackContext):
+    update.message.reply_markdown_v2(
+        "Правила игры *Пидор Дня* \(только для групповых чатов\):\n"
+        "*1\.* Зарегистрируйтесь в игру по команде */pidoreg*\n"
+        "*2\.* Подождите пока зарегиструются все \(или большинство :\)\n"
+        "*3\.* Запустите розыгрыш по команде */pidor*\n"
+        "*4\.* Просмотр статистики канала по команде */pidorstats*, */pidorall*\n"
+        "*5\.* Личная статистика по команде */pidorme*\n"
+        "*6\.* Статистика за последний год по комнаде */pidor2020* \(так же есть за 2016\-2020\)\n"
+        "*7\. \(\!\!\! Только для администраторов чатов\)*: удалить из игры может только Админ канала, сначала выведя по команде список игроков: */pidormin* list\n"
+        "Удалить же игрока можно по команде \(используйте идентификатор пользователя \- цифры из списка пользователей\): */pidormin* del 123456\n"
+        "\n"
+        "*Важно*, розыгрыш проходит только *раз в день*, повторная команда выведет *результат* игры\.\n"
+        "\n"
+        "Сброс розыгрыша происходит каждый день в 12 часов ночи по UTC\+2 \(примерно в два часа ночи по Москве\)\.\n\n"
+        "Поддержать бота можно по [ссылке](https://github.com/unaimillan/sublime-telegram-bot) :\)"
+        , disable_web_page_preview=True)
 
 
 def pidoreg_cmd(update: Update, _context: CallbackContext):
