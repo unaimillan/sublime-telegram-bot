@@ -14,4 +14,4 @@ pidorstats - POTD game stats for this year
 pidorall - POTD game stats for all time
 pidorme - POTD personal stats
 credits - report issue to github repo
-meme - get meme of the day
+meme - get some random meme

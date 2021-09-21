@@ -1,7 +1,9 @@
 from urllib.parse import quote as urlquote
 
+import telegram.bot
 from telegram import Update
 from telegram.ext import CallbackContext
+import requests
 
 from bot.utils import raw_name, escape_markdown2
 
@@ -51,6 +53,16 @@ def credits_cmd(update: Update, _context: CallbackContext):
         "The source code of the bot available via [GitHub repository]"
         "(https://github.com/unaimillan/sublime-telegram-bot)",
         disable_web_page_preview=True)
+
+
+def meme_cmd(update: Update, _context: CallbackContext):
+    try:
+        rand_link = 'https://imgflip.com/ajax_img_flip'
+        meme_id = requests.get(rand_link).content.decode()[3:]
+        update.message.reply_photo(f'https://i.imgflip.com/{meme_id}.jpg')
+    except requests.exceptions.RequestException as exception:
+        update.message.reply_text('Srry, smth went wrong(')
+        raise exception
 
 
 # Key-Value commands
