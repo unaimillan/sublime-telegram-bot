@@ -30,8 +30,13 @@ def shrug_cmd(update: Update, _context: CallbackContext):
 
 
 def google_cmd(update: Update, _context: CallbackContext):
-    update.message.reply_text('https://lmgtfy.com/?q=' + escape_markdown2(
-        urlquote(update.message.text[8:])), disable_web_page_preview=True)
+    query = update.message.text[8:]
+    if not query:
+        update.message.reply_text('What should I search for?')
+    else:
+        update.message.reply_text('https://lmgtfy.com/?q=' +
+                                  urlquote(update.message.text[8:]),
+                                  disable_web_page_preview=True)
 
 
 def pin_message_cmd(update: Update, _context: CallbackContext):
