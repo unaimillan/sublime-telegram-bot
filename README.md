@@ -1,8 +1,10 @@
 # Fake sublime telegram bot sources
-This is _FAKE_ sources just **_imitating_** the functionality similar 
-to one by SublimeBot in Telegram
+
+This is _FAKE_ sources just **_imitating_** the functionality similar to the one by SublimeBot in Telegram
 
 > For any legal or copyright issues please [contact me via email](mailto:super.mvk@yandex.ru)
+
+> You can support original bot author [unicott](http://unicott.com/) via the [following link](https://www.paypal.me/unicott/2)
 
 ## Prerequisites
 
@@ -28,5 +30,5 @@ Bot reads Telegram Bot Token from both `.env` file in current folder and also
 ## Docker
 
 * Build the image `docker build . -t <imagename>`
-* Run docker image directly `docker run --rm --env-file=.env -it <imagename>` 
-* or by `docker-compose` and `.env` file with token
+* Run docker image directly `docker run --rm --env-file=.env -it <imagename>`
+* or by `docker-compose up` and `.env` file with token
