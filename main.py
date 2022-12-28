@@ -4,12 +4,9 @@ from os import getenv
 
 import telegram.ext
 from dotenv import load_dotenv
-from telegram.ext import Updater, CommandHandler, MessageHandler
-from telegram.ext.filters import Filters
+from telegram.ext import Updater
 
-from bot.commands import hello_cmd, echo_cmd, pin_message_cmd, slap_cmd, me_cmd, \
-    unknown_command_cmd, shrug_cmd, google_cmd, get_cmd, list_cmd, set_cmd, \
-    del_cmd, credits_cmd, pidor_cmd, pidoreg_cmd, meme_cmd, pidorules_cmd
+from bot.dispatcher import init_dispatcher
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG,
@@ -21,36 +18,15 @@ logger.setLevel(logging.INFO)
 # Load configs and create bot instance
 load_dotenv()  # load telegram bot token from .env file
 API_TOKEN = getenv("TELEGRAM_BOT_API_SECRET", "")
-logger.debug("Beginning of token: %s", API_TOKEN[:5])
 if not os.path.exists('storage'):
     os.mkdir('storage')
-updater = Updater(API_TOKEN, use_context=True,
-                  persistence=telegram.ext.PicklePersistence(
-                      filename='storage/data.bin'))
-dispatch = updater.dispatcher
-not_edited = ~Filters.update.edited_message
 
-# Setup dispatcher with callbacks
-dispatch.add_handler(CommandHandler('hello', hello_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('slap', slap_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('me', me_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('shrug', shrug_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('google', google_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('pin', pin_message_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('credits', credits_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('meme', meme_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('get', get_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('list', list_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('set', set_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('del', del_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('pidor', pidor_cmd, filters=not_edited))
-dispatch.add_handler(
-    CommandHandler('pidorules', pidorules_cmd, filters=not_edited))
-dispatch.add_handler(CommandHandler('pidoreg', pidoreg_cmd, filters=not_edited))
-updater.dispatcher.add_handler(
-    MessageHandler(Filters.regex(r'^/\w+') & not_edited, unknown_command_cmd))
-updater.dispatcher.add_handler(
-    MessageHandler(Filters.text & ~Filters.update.edited_message, echo_cmd))
+updater = Updater(API_TOKEN, persistence=telegram.ext.PicklePersistence(
+    filename='storage/data.bin'))
+dispatch = updater.dispatcher
+
+# Setup dispatcher
+init_dispatcher(updater.dispatcher)
 
 # Run the bot
 updater.start_polling()
