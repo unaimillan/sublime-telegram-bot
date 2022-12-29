@@ -1,8 +1,10 @@
-import itertools
 import random
 from datetime import datetime
 
 import jsons
+from telegram import User
+
+from bot.utils import raw_name
 
 
 # TODO: Use database with indexes on fields to improve performance
@@ -10,20 +12,25 @@ class Game:
     """Game model"""
 
     players: list[int] = []
+    player_names: dict[int, str] = {}
     years: dict[int, dict[int, int]] = {}
 
     def __init__(self):
         self.players = []
+        self.player_names = {}
         self.years = {}
 
-    def add_player(self, user_id: int) -> bool:
-        if user_id not in self.players:
-            self.players.append(user_id)
+    def add_player(self, user: User) -> bool:
+        self.player_names[user.id] = raw_name(user)
+        if user.id not in self.players:
+            self.players.append(user.id)
             return True
         return False
 
-    def remove_player(self, user_id: int):
-        self.players.remove(user_id)
+    def remove_player(self, user: User):
+        self.player_names[user.id] = raw_name(user)
+        if user.id in self.players:
+            self.players.remove(user.id)
 
     def ensure_year(self):
         if self.current_year not in self.years:
@@ -42,19 +49,24 @@ class Game:
         self.years[self.current_year][self.current_day] = winner_id
         return winner_id
 
-    def stats_current_year(self) -> dict[int, int]:
+    def get_sorted_name_count(self, count: dict[int, int]) -> list[(str, int)]:
+        names_count = [(self.player_names[user_id], count) for user_id, count in
+                       count.items()]
+        return sorted(names_count, key=lambda x: x[1], reverse=True)[:50]
+
+    def stats_current_year(self) -> list[(str, int)]:
         self.ensure_year()
         counter = {}
         for winner in self.years[self.current_year].values():
             counter[winner] = counter.get(winner, 0) + 1
-        return counter
+        return self.get_sorted_name_count(counter)
 
-    def stats_all_time(self) -> dict[int, int]:
+    def stats_all_time(self) -> list[(str, int)]:
         counter = {}
         for days in self.years.values():
             for winner in days.values():
                 counter[winner] = counter.get(winner, 0) + 1
-        return counter
+        return self.get_sorted_name_count(counter)
 
     def stats_personal(self, user_id: int) -> int:
         count = 0
@@ -66,7 +78,7 @@ class Game:
 
     @property
     def current_day(self):
-        return datetime.now().day
+        return datetime.now().timetuple().tm_yday
 
     @property
     def current_year(self):
@@ -77,4 +89,4 @@ class Game:
 
     @staticmethod
     def from_json(json: str) -> 'Game':
-        return jsons.loads(json, Game, strict=True)
+        return jsons.loads(json, Game)

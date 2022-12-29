@@ -1,11 +1,19 @@
+import random
+import time
+
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 
 from bot.handlers.game.models import Game
+from bot.handlers.game.phrases import stage1, stage2, stage3, stage4
 from bot.handlers.game.text_static import STATS_PERSONAL, \
     STATS_CURRENT_YEAR, \
-    STATS_ALL_TIME, STATS_LIST_ITEM
+    STATS_ALL_TIME, STATS_LIST_ITEM, REGISTRATION_SUCCESS, \
+    ERROR_ALREADY_REGISTERED, ERROR_ZERO_PLAYERS, ERROR_NOT_ENOUGH_PLAYERS, \
+    REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT
 from bot.utils import raw_name
+
+GAME_RESULT_TIME_DELAY = 2
 
 
 # PIDOR Game
@@ -15,26 +23,30 @@ def pidor_cmd(update: Update, context: CallbackContext):
     else:
         game = Game()
 
-    if len(game.players) < 2:
-        update.effective_chat.send_message('Недостаточно игроков для розыгрыша')
-        return
+    # if len(game.players) < 2:
+    #     update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
+    #     return
 
     winner_id: int = game.check_winner()
     if winner_id:
         update.message.reply_markdown_v2(
-            r'хехе, к сожалению {} \- пидор'.format(
-                update.message.from_user.name))
+            CURRENT_DAY_GAME_RESULT.format(username=game.player_names[winner_id]))
     else:
         winner_id = game.play()
-        update.effective_chat.send_message('let\'s start a game')
-        update.effective_chat.send_message(
-            'Sooo the winner is {}'.format(winner_id))
+        update.effective_chat.send_message(random.choice(stage1.phrases))
+        time.sleep(GAME_RESULT_TIME_DELAY)
+        update.effective_chat.send_message(random.choice(stage2.phrases))
+        time.sleep(GAME_RESULT_TIME_DELAY)
+        update.effective_chat.send_message(random.choice(stage3.phrases))
+        time.sleep(GAME_RESULT_TIME_DELAY)
+        update.effective_chat.send_message(random.choice(stage4.phrases).format(
+            username='@' + game.player_names[winner_id]))
 
     context.chat_data['game'] = game.to_json()
 
 
 def pidorules_cmd(update: Update, _context: CallbackContext):
-    update.message.reply_markdown_v2(
+    update.effective_chat.send_message(
         "Правила игры *Пидор Дня* \(только для групповых чатов\):\n"
         "*1\.* Зарегистрируйтесь в игру по команде */pidoreg*\n"
         "*2\.* Подождите пока зарегиструются все \(или большинство :\)\n"
@@ -49,7 +61,7 @@ def pidorules_cmd(update: Update, _context: CallbackContext):
         "\n"
         "Сброс розыгрыша происходит каждый день в 12 часов ночи по UTC\+2 \(примерно в два часа ночи по Москве\)\.\n\n"
         "Поддержать бота можно по [ссылке](https://github.com/unaimillan/sublime-telegram-bot) :\)"
-        , disable_web_page_preview=True)
+        , parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
 
 
 def pidoreg_cmd(update: Update, context: CallbackContext):
@@ -58,8 +70,14 @@ def pidoreg_cmd(update: Update, context: CallbackContext):
     else:
         game = Game()
 
-    game.add_player(update.message.from_user.id)
-    update.effective_message.reply_markdown_v2('')
+    if len(game.players) == 0:
+        update.effective_chat.send_message(
+            ERROR_ZERO_PLAYERS.format(username=update.message.from_user.name))
+
+    if game.add_player(update.message.from_user):
+        update.effective_message.reply_markdown_v2(REGISTRATION_SUCCESS)
+    else:
+        update.effective_message.reply_markdown_v2(ERROR_ALREADY_REGISTERED)
 
     context.chat_data['game'] = game.to_json()
 
@@ -70,10 +88,18 @@ def pidorunreg_cmd(update: Update, context: CallbackContext):
     else:
         game = Game()
 
-    game.remove_player(update.effective_message.from_user.id)
-    update.effective_message.reply_markdown_v2('')
+    game.remove_player(update.effective_message.from_user)
+    update.effective_message.reply_markdown_v2(REMOVE_REGISTRATION)
 
     context.chat_data['game'] = game.to_json()
+
+
+def get_sorted_list_text(player_list: list[(str, int)]) -> str:
+    result = []
+    for number, (name, amount) in enumerate(player_list, 1):
+        result.append(STATS_LIST_ITEM.format(number=number, username=name,
+                                             amount=amount))
+    return ''.join(result)
 
 
 def pidorstats_cmd(update: Update, context: CallbackContext):
@@ -83,12 +109,7 @@ def pidorstats_cmd(update: Update, context: CallbackContext):
         game = Game()
 
     results = game.stats_current_year()
-    player_stats = ''
-    for number, user_id, amount in enumerate(sorted(results.items())[:50], 1):
-        player_stats += STATS_LIST_ITEM.format(number=number,
-                                               username=raw_name(
-                                                   update.effective_user),
-                                               amount=amount)
+    player_stats = get_sorted_list_text(results)
     answer = STATS_CURRENT_YEAR.format(player_stats=player_stats,
                                        player_count=len(results))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
@@ -101,14 +122,7 @@ def pidorall_cmd(update: Update, context: CallbackContext):
         game = Game()
 
     results = game.stats_all_time()
-    player_stats = ''
-    for number, user_id, amount in enumerate(sorted(results.items())[:50], 1):
-        player_stats += STATS_LIST_ITEM.format(number=number,
-                                               username=raw_name(
-                                                   context.bot.get_chat_member(
-                                                       update.effective_chat,
-                                                       user_id).user),
-                                               amount=amount)
+    player_stats = get_sorted_list_text(results)
     answer = STATS_ALL_TIME.format(player_stats=player_stats,
                                    player_count=len(results))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)

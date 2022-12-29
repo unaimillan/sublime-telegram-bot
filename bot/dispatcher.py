@@ -1,11 +1,13 @@
 from telegram.ext import Dispatcher, CommandHandler, Filters
 
 from bot.handlers.about.commands import about_cmd
-from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd
+from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd, \
+    pidorunreg_cmd, pidorstats_cmd, pidorall_cmd, pidorme_cmd
 from bot.handlers.kvstore.commands import get_cmd, set_cmd, del_cmd, list_cmd
 from bot.handlers.meme.commands import meme_cmd, memeru_cmd
 from bot.handlers.misc.commands import hello_cmd, echo_cmd, slap_cmd, me_cmd, \
     shrug_cmd, google_cmd, pin_message_cmd
+from bot.handlers.misc.error import bot_error_handler
 
 
 # TODO: Refactor this function to automatically scan for handlers ending with
@@ -26,6 +28,10 @@ def init_dispatcher(dp: Dispatcher):
     dp.add_handler(
         CommandHandler('pidorules', pidorules_cmd, filters=ne))
     dp.add_handler(CommandHandler('pidoreg', pidoreg_cmd, filters=ne))
+    dp.add_handler(CommandHandler('pidorunreg', pidorunreg_cmd, filters=ne))
+    dp.add_handler(CommandHandler('pidorstats', pidorstats_cmd, filters=ne))
+    dp.add_handler(CommandHandler('pidorall', pidorall_cmd, filters=ne))
+    dp.add_handler(CommandHandler('pidorme', pidorme_cmd, filters=ne))
 
     # Key-Value storage handlers
     dp.add_handler(CommandHandler('get', get_cmd, filters=ne))
@@ -41,3 +47,5 @@ def init_dispatcher(dp: Dispatcher):
     dp.add_handler(CommandHandler('shrug', shrug_cmd, filters=ne))
     dp.add_handler(CommandHandler('google', google_cmd, filters=ne))
     dp.add_handler(CommandHandler('pin', pin_message_cmd, filters=ne))
+
+    dp.add_error_handler(bot_error_handler)
