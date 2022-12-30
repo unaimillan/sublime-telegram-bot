@@ -1,6 +1,8 @@
+import logging
 import random
 
 import requests
+import telegram.error
 from telegram import Update, InlineKeyboardButton, \
     InlineKeyboardMarkup
 from telegram.ext import CallbackContext
@@ -35,11 +37,14 @@ ru_meme_channel_list = [
 # TODO: Add next button and callback_data handles for it
 # InlineKeyboardButton('🔁', callback_data='MEMERU_NEXT')
 def memeru_cmd(update: Update, _context: CallbackContext):
+    channel_link, start, end = random.choice(ru_meme_channel_list)
+    meme_id = random.randint(start, end)
+    meme_link = f'{channel_link}/{meme_id}'
     try:
-        channel_link, start, end = random.choice(ru_meme_channel_list)
-        meme_id = random.randint(start, end)
-        meme_link = f'{channel_link}/{meme_id}'
         update.message.reply_photo(meme_link, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('🔗', url=meme_link)]]))
     except requests.exceptions.RequestException as exception:
         update.message.reply_text('Srry, smth went wrong(')
+        raise exception
+    except telegram.error.BadRequest as exception:
+        logging.debug(f'MEMERU Bad request link: {meme_link}')
         raise exception

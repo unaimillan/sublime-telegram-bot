@@ -8,6 +8,7 @@ from bot.handlers.meme.commands import meme_cmd, memeru_cmd
 from bot.handlers.misc.commands import hello_cmd, echo_cmd, slap_cmd, me_cmd, \
     shrug_cmd, google_cmd, pin_message_cmd
 from bot.handlers.misc.error import bot_error_handler
+from bot.handlers.tiktok.commands import tt_video_cmd, tt_depersonalize_cmd
 
 
 # TODO: Refactor this function to automatically scan for handlers ending with
@@ -18,6 +19,10 @@ def init_dispatcher(dp: Dispatcher):
 
     # About handler
     dp.add_handler(CommandHandler('about', about_cmd, filters=ne))
+
+    # Tiktok handlers
+    dp.add_handler(CommandHandler('ttvideo', tt_video_cmd, filters=ne))
+    dp.add_handler(CommandHandler('ttlink', tt_depersonalize_cmd, filters=ne))
 
     # Meme handlers
     dp.add_handler(CommandHandler('meme', meme_cmd, filters=ne))
