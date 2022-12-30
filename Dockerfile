@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.10-slim
 LABEL maintainer="super.mvk@yandex.ru"
 
 ENV VENV_PATH=/opt/venv \
