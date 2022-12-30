@@ -23,9 +23,9 @@ def pidor_cmd(update: Update, context: CallbackContext):
     else:
         game = Game()
 
-    # if len(game.players) < 2:
-    #     update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
-    #     return
+    if len(game.players) < 2:
+        update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
+        return
 
     winner_id: int = game.check_winner()
     if winner_id:
