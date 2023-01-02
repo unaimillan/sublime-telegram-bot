@@ -1,10 +1,13 @@
 import random
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import jsons
 from telegram import User
 
 from bot.utils import raw_name
+
+MOSCOW_TZ = ZoneInfo('Europe/Moscow')
 
 
 # TODO: Use database with indexes on fields to improve performance
@@ -78,11 +81,11 @@ class Game:
 
     @property
     def current_day(self):
-        return datetime.now().timetuple().tm_yday
+        return datetime.now(tz=MOSCOW_TZ).timetuple().tm_yday
 
     @property
     def current_year(self):
-        return datetime.now().year
+        return datetime.now(tz=MOSCOW_TZ).year
 
     def to_json(self) -> str:
         return jsons.dumps(self, strip_properties=True)
