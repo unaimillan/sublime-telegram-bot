@@ -30,4 +30,5 @@ init_dispatcher(updater.dispatcher)
 
 # Run the bot
 updater.start_polling()
+logger.info(f"https://t.me/{updater.bot.get_me()['username']} started")
 updater.idle()
