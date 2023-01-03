@@ -7,13 +7,16 @@ from telegram import Update, InlineKeyboardButton, \
     InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import CallbackContext
 
-from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH
+from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH, \
+    MEMERU_SAVE, MEME_SAVE
 
 
-def generate_keyboard(link:str, callback_text: str) -> InlineKeyboardMarkup:
+def generate_keyboard(link: str, save_text: str,
+                      refresh_text: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
         InlineKeyboardButton('🔗', url=link),
-        InlineKeyboardButton('🔁', callback_data=callback_text)]])
+        InlineKeyboardButton('💾', callback_data=save_text),
+        InlineKeyboardButton('🔁', callback_data=refresh_text)]])
 
 
 def get_random_en_meme() -> (str, str):
@@ -32,19 +35,58 @@ def get_random_en_meme() -> (str, str):
 def meme_cmd(update: Update, _context: CallbackContext):
     try:
         meme_link, source_link = get_random_en_meme()
-        update.message.reply_photo(meme_link, reply_markup=generate_keyboard(source_link, MEME_REFRESH))
+        update.message.reply_photo(meme_link,
+                                   reply_markup=generate_keyboard(source_link,
+                                                                  MEME_SAVE,
+                                                                  MEME_REFRESH))
     except requests.exceptions.RequestException as exception:
         update.message.reply_text('Srry, smth went wrong(')
         raise exception
 
 
+def meme_save_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    old_markup = update.effective_message.reply_markup
+    old_url = old_markup.inline_keyboard[0][0].url
+    new_meme_link, source_link = get_random_en_meme()
+    answer_message = ''
+    try:
+        update.effective_message.edit_reply_markup(
+            InlineKeyboardMarkup([[InlineKeyboardButton('🔗', url=old_url)]]))
+        update.effective_chat.send_photo(new_meme_link,
+                                     reply_markup=generate_keyboard(
+                                         source_link, MEME_SAVE,
+                                         MEME_REFRESH))
+    except requests.exceptions.RequestException as exception:
+        logging.warning('HTTP request exception in meme_save_callback')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    except telegram.error.BadRequest as exception:
+        logging.debug(f'MEMERU Bad request link: {new_meme_link}')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    query.answer(answer_message)
+
+
 def meme_refresh_callback(update: Update, context: CallbackContext):
     query = update.callback_query
     meme_link, source_link = get_random_en_meme()
-    update.effective_message.edit_media(InputMediaPhoto(meme_link),
-                               reply_markup=generate_keyboard(source_link,
-                                                              MEME_REFRESH))
-    query.answer()
+    answer_message = ''
+    try:
+        update.effective_message.edit_media(InputMediaPhoto(meme_link),
+                                            reply_markup=generate_keyboard(
+                                                source_link,
+                                                MEME_SAVE,
+                                                MEME_REFRESH))
+    except requests.exceptions.RequestException as exception:
+        logging.warning('HTTP request exception in memeru_refresh_callback')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    except telegram.error.BadRequest as exception:
+        logging.debug(f'MEMERU Bad request link: {meme_link}')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    query.answer(answer_message)
 
 
 ru_meme_channel_list = [
@@ -68,27 +110,61 @@ def get_random_ru_meme() -> str:
 def memeru_cmd(update: Update, _context: CallbackContext):
     meme_link = get_random_ru_meme()
     try:
-        update.message.reply_photo(meme_link, reply_markup=generate_keyboard(meme_link, MEMERU_REFRESH))
+        update.message.reply_photo(meme_link,
+                                   reply_markup=generate_keyboard(meme_link,
+                                                                  MEMERU_SAVE,
+                                                                  MEMERU_REFRESH))
     except requests.exceptions.RequestException as exception:
-        update.message.reply_text('Srry, smth went wrong(')
+        logging.warning('HTTP request exception in memeru_refresh_callback')
+        logging.debug(f'Exception: {exception}')
         raise exception
     except telegram.error.BadRequest as exception:
         logging.debug(f'MEMERU Bad request link: {meme_link}')
+        logging.debug(f'Exception: {exception}')
         raise exception
+
 
 
 def memeru_refresh_callback(update: Update, context: CallbackContext):
     query = update.callback_query
     meme_link = get_random_ru_meme()
+    answer_message = ''
     try:
         update.effective_message.edit_media(InputMediaPhoto(meme_link),
-                                   reply_markup=generate_keyboard(meme_link,
-                                                              MEMERU_REFRESH))
+                                            reply_markup=generate_keyboard(
+                                                meme_link,
+                                                MEMERU_SAVE,
+                                                MEMERU_REFRESH))
     except requests.exceptions.RequestException as exception:
         logging.warning('HTTP request exception in memeru_refresh_callback')
-        update.message.reply_text('Srry, smth went wrong(')
-        raise exception
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
     except telegram.error.BadRequest as exception:
         logging.debug(f'MEMERU Bad request link: {meme_link}')
-        raise exception
-    query.answer()
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    query.answer(answer_message)
+
+def memeru_save_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    new_meme_link = get_random_ru_meme()
+    answer_message = ''
+    try:
+        old_markup = update.effective_message.reply_markup
+        old_url = old_markup.inline_keyboard[0][0].url
+        update.effective_message.edit_reply_markup(
+            InlineKeyboardMarkup([[InlineKeyboardButton('🔗', url=old_url)]]))
+        update.effective_chat.send_photo(new_meme_link,
+                                         reply_markup=generate_keyboard(
+                                             new_meme_link,
+                                             MEMERU_SAVE,
+                                             MEMERU_REFRESH))
+    except requests.exceptions.RequestException as exception:
+        logging.warning('HTTP request exception in memeru_save_callback')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    except telegram.error.BadRequest as exception:
+        logging.debug(f'MEMERU Bad request link: {new_meme_link}')
+        logging.debug(f'Exception: {exception}')
+        answer_message = 'Error! Try again'
+    query.answer(answer_message)

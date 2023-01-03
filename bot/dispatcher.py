@@ -6,8 +6,10 @@ from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd, \
     pidorunreg_cmd, pidorstats_cmd, pidorall_cmd, pidorme_cmd
 from bot.handlers.kvstore.commands import get_cmd, set_cmd, del_cmd, list_cmd
 from bot.handlers.meme.commands import meme_cmd, memeru_cmd, \
-    meme_refresh_callback, memeru_refresh_callback
-from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH
+    meme_refresh_callback, memeru_refresh_callback, meme_save_callback, \
+    memeru_save_callback
+from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH, \
+    MEME_SAVE, MEMERU_SAVE
 from bot.handlers.misc.commands import hello_cmd, echo_cmd, slap_cmd, me_cmd, \
     shrug_cmd, google_cmd, pin_message_cmd
 from bot.handlers.misc.error import bot_error_handler
@@ -29,8 +31,10 @@ def init_dispatcher(dp: Dispatcher):
 
     # Meme handlers
     dp.add_handler(CommandHandler('meme', meme_cmd, filters=ne))
+    dp.add_handler(CallbackQueryHandler(meme_save_callback,pattern=MEME_SAVE))
     dp.add_handler(CallbackQueryHandler(meme_refresh_callback, pattern=MEME_REFRESH))
     dp.add_handler(CommandHandler('memeru', memeru_cmd, filters=ne))
+    dp.add_handler(CallbackQueryHandler(memeru_save_callback, pattern=MEMERU_SAVE))
     dp.add_handler(CallbackQueryHandler(memeru_refresh_callback, pattern=MEMERU_REFRESH))
 
     # Game handlers
