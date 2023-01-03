@@ -11,7 +11,7 @@ from bot.handlers.game.text_static import STATS_PERSONAL, \
     STATS_ALL_TIME, STATS_LIST_ITEM, REGISTRATION_SUCCESS, \
     ERROR_ALREADY_REGISTERED, ERROR_ZERO_PLAYERS, ERROR_NOT_ENOUGH_PLAYERS, \
     REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT
-from bot.utils import raw_name
+from bot.utils import escape_markdown2
 
 GAME_RESULT_TIME_DELAY = 2
 
@@ -30,7 +30,8 @@ def pidor_cmd(update: Update, context: CallbackContext):
     winner_id: int = game.check_winner()
     if winner_id:
         update.message.reply_markdown_v2(
-            CURRENT_DAY_GAME_RESULT.format(username=game.player_names[winner_id]))
+            CURRENT_DAY_GAME_RESULT.format(
+                username=game.player_names[winner_id]))
     else:
         winner_id = game.play()
         update.effective_chat.send_message(random.choice(stage1.phrases))
@@ -97,7 +98,8 @@ def pidorunreg_cmd(update: Update, context: CallbackContext):
 def get_sorted_list_text(player_list: list[(str, int)]) -> str:
     result = []
     for number, (name, amount) in enumerate(player_list, 1):
-        result.append(STATS_LIST_ITEM.format(number=number, username=name,
+        result.append(STATS_LIST_ITEM.format(number=number,
+                                             username=escape_markdown2(name),
                                              amount=amount))
     return ''.join(result)
 
