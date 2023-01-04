@@ -21,8 +21,8 @@ commands = [
     ('pidorme', 'POTD personal stats'),
     ('meme', 'get some random meme'),
     ('memeru', 'get some random russian meme'),
-    # ('ttvideo', 'get video from tiktok'),
-    # ('ttlink', 'get depersonalized tiktok link'),
+    ('ttvideo', 'get video from tiktok'),
+    ('ttlink', 'get depersonalized tiktok link'),
     ('about', 'some info about github repo'),
 ]
 

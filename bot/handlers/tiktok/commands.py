@@ -1,29 +1,64 @@
-import requests
+import tempfile
+
+import yt_dlp.utils
 from telegram import Update
 from telegram.ext import CallbackContext
+from yt_dlp import YoutubeDL
+
+
+def get_tt_video(url: str) -> bytes:
+    result = b''
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ydl_opts = {
+            # 'quiet': True,
+            'paths': {
+                'home': tmpdir,
+            }
+        }
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.sanitize_info(ydl.extract_info(url))
+            with open(info['requested_downloads'][0]['filepath'], 'rb') as file:
+                result = file.read()
+    return result
 
 
 def tt_video_cmd(update: Update, context: CallbackContext) -> None:
-    update.effective_message.reply_text(
-        "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    source_url = ''
+    if context.args and len(context.args) == 1:
+        source_url = context.args[0]
+    elif update.effective_message.reply_to_message and len(update.effective_message.reply_to_message.text) > 10:
+        source_url = update.effective_message.reply_to_message.text
+    else:
+        update.effective_message.reply_text(
+            "Provide a TikTok link after the command or reply to the link")
+        return
+
+    try:
+        update.effective_message.reply_video(get_tt_video(source_url))
+    except yt_dlp.utils.DownloadError:
+        update.effective_chat.send_message(
+            'Failed to process the link, please, try another one')
 
 
-tt_headers = {"Accept": "*/*",
-              "Accept-Encoding": "identity;q=1, *;q=0",
-              "Accept-Language": "en-US;en;q=0.9",
-              "Cache-Control": "no-cache",
-              "Connection": "keep-alive",
-              # "Host": link.split("/")[2], # we split our download link to get    #the server host.
-              "Pragma": "no-cache",
-              "Range": "bytes=0-",
-              "Referer": "https://www.tiktok.com/",
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
-              }
+def get_tt_source_url(url: str) -> str:
+    with YoutubeDL() as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info['webpage_url'].replace(info['uploader_id'],
+                                           info['uploader'])
 
 
 def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
-    update.effective_message.reply_text('Not implemented yet')
-    return
-    tt_link = context.args[0]
-    resp = requests.head(tt_link, allow_redirects=True, headers=tt_headers)
-    update.effective_message.reply_text(resp.url)
+    if context.args and len(context.args) == 1:
+        source_url = context.args[0]
+    elif update.effective_message.reply_to_message and len(update.effective_message.reply_to_message.text) > 10:
+        source_url = update.effective_message.reply_to_message.text
+    else:
+        update.effective_message.reply_text(
+            "Provide a TikTok link after the command or reply to the link")
+        return
+
+    try:
+        update.effective_chat.send_message(get_tt_source_url(source_url))
+    except yt_dlp.utils.DownloadError:
+        update.effective_chat.send_message(
+            'Failed to process the link, please, try another one')
