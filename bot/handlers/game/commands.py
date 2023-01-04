@@ -113,7 +113,7 @@ def pidorstats_cmd(update: Update, context: CallbackContext):
     results = game.stats_current_year()
     player_stats = get_sorted_list_text(results)
     answer = STATS_CURRENT_YEAR.format(player_stats=player_stats,
-                                       player_count=len(results))
+                                       player_count=len(game.players))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
 
 
@@ -126,7 +126,7 @@ def pidorall_cmd(update: Update, context: CallbackContext):
     results = game.stats_all_time()
     player_stats = get_sorted_list_text(results)
     answer = STATS_ALL_TIME.format(player_stats=player_stats,
-                                   player_count=len(results))
+                                   player_count=len(game.players))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
 
 
