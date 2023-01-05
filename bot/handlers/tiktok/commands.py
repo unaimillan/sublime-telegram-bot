@@ -8,12 +8,14 @@ from telegram import Update, InlineQueryResultArticle, \
 from telegram.ext import CallbackContext
 from yt_dlp import YoutubeDL
 
+from bot.handlers.tiktok.text_static import PROCESSING_STARTED
+
 
 def get_tt_video(url: str) -> bytes:
     result = b''
     with tempfile.TemporaryDirectory() as tmpdir:
         ydl_opts = {
-            # 'quiet': True,
+            'quiet': True,
             'paths': {
                 'home': tmpdir,
             }
@@ -38,14 +40,19 @@ def tt_video_cmd(update: Update, context: CallbackContext) -> None:
         return
 
     try:
+        msg = update.effective_message.reply_text(PROCESSING_STARTED)
         update.effective_message.reply_video(get_tt_video(source_url))
+        msg.delete()
     except yt_dlp.utils.DownloadError:
         update.effective_chat.send_message(
             'Failed to process the link, please, try another one')
 
 
 def get_tt_source_url(url: str) -> str:
-    with YoutubeDL() as ydl:
+    ydl_opts = {
+        'quiet': True,
+    }
+    with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
         return info['webpage_url'].replace(info['uploader_id'],
                                            info['uploader'])
@@ -63,7 +70,9 @@ def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
         return
 
     try:
+        msg = update.effective_message.reply_text(PROCESSING_STARTED)
         update.effective_chat.send_message(get_tt_source_url(source_url))
+        msg.delete()
     except yt_dlp.utils.DownloadError:
         update.effective_chat.send_message(
             'Failed to process the link, please, try another one')
@@ -71,7 +80,6 @@ def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
 
 def tt_inline_cmd(update: Update, context: CallbackContext):
     query = update.inline_query.query
-    print('got inline query:', query)
 
     if query == "":
         return
