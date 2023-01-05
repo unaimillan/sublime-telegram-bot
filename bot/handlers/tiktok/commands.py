@@ -1,7 +1,10 @@
+import random
 import tempfile
+from uuid import uuid4
 
 import yt_dlp.utils
-from telegram import Update
+from telegram import Update, InlineQueryResultArticle, \
+    InputTextMessageContent
 from telegram.ext import CallbackContext
 from yt_dlp import YoutubeDL
 
@@ -26,7 +29,8 @@ def tt_video_cmd(update: Update, context: CallbackContext) -> None:
     source_url = ''
     if context.args and len(context.args) == 1:
         source_url = context.args[0]
-    elif update.effective_message.reply_to_message and len(update.effective_message.reply_to_message.text) > 10:
+    elif update.effective_message.reply_to_message and len(
+            update.effective_message.reply_to_message.text) > 10:
         source_url = update.effective_message.reply_to_message.text
     else:
         update.effective_message.reply_text(
@@ -50,7 +54,8 @@ def get_tt_source_url(url: str) -> str:
 def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
     if context.args and len(context.args) == 1:
         source_url = context.args[0]
-    elif update.effective_message.reply_to_message and len(update.effective_message.reply_to_message.text) > 10:
+    elif update.effective_message.reply_to_message and len(
+            update.effective_message.reply_to_message.text) > 10:
         source_url = update.effective_message.reply_to_message.text
     else:
         update.effective_message.reply_text(
@@ -62,3 +67,38 @@ def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
     except yt_dlp.utils.DownloadError:
         update.effective_chat.send_message(
             'Failed to process the link, please, try another one')
+
+
+def tt_inline_cmd(update: Update, context: CallbackContext):
+    query = update.inline_query.query
+    print('got inline query:', query)
+
+    if query == "":
+        return
+
+    shuffled = []
+    for word in query.split():
+        if len(word) > 3:
+            letters = word[1:-1]
+            res = word[0] + ''.join(random.sample(letters, len(letters))) + \
+                  word[-1]
+            shuffled.append(res)
+        else:
+            shuffled.append(word)
+
+    results = [
+        InlineQueryResultArticle(
+            id=str(uuid4()),
+            title='Caps',
+            description='Make query text upper case',
+            input_message_content=InputTextMessageContent(query.upper()),
+        ),
+        InlineQueryResultArticle(
+            id=str(uuid4()),
+            title='Shuffle',
+            description='Shuffle all the letters inside words',
+            input_message_content=InputTextMessageContent(' '.join(shuffled))
+        )
+    ]
+
+    update.inline_query.answer(results)

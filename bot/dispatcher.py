@@ -1,5 +1,5 @@
 from telegram.ext import Dispatcher, CommandHandler, Filters, \
-    CallbackQueryHandler
+    CallbackQueryHandler, InlineQueryHandler
 
 from bot.handlers.about.commands import about_cmd
 from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd, \
@@ -13,7 +13,8 @@ from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH, \
 from bot.handlers.misc.commands import hello_cmd, echo_cmd, slap_cmd, me_cmd, \
     shrug_cmd, google_cmd, pin_message_cmd
 from bot.handlers.misc.error import bot_error_handler
-from bot.handlers.tiktok.commands import tt_video_cmd, tt_depersonalize_cmd
+from bot.handlers.tiktok.commands import tt_video_cmd, tt_depersonalize_cmd, \
+    tt_inline_cmd
 
 
 # TODO: Refactor this function to automatically scan for handlers ending with
@@ -28,14 +29,18 @@ def init_dispatcher(dp: Dispatcher):
     # Tiktok handlers
     dp.add_handler(CommandHandler('ttvideo', tt_video_cmd, filters=ne))
     dp.add_handler(CommandHandler('ttlink', tt_depersonalize_cmd, filters=ne))
+    dp.add_handler(InlineQueryHandler(tt_inline_cmd))
 
     # Meme handlers
     dp.add_handler(CommandHandler('meme', meme_cmd, filters=ne))
-    dp.add_handler(CallbackQueryHandler(meme_save_callback,pattern=MEME_SAVE))
-    dp.add_handler(CallbackQueryHandler(meme_refresh_callback, pattern=MEME_REFRESH))
+    dp.add_handler(CallbackQueryHandler(meme_save_callback, pattern=MEME_SAVE))
+    dp.add_handler(
+        CallbackQueryHandler(meme_refresh_callback, pattern=MEME_REFRESH))
     dp.add_handler(CommandHandler('memeru', memeru_cmd, filters=ne))
-    dp.add_handler(CallbackQueryHandler(memeru_save_callback, pattern=MEMERU_SAVE))
-    dp.add_handler(CallbackQueryHandler(memeru_refresh_callback, pattern=MEMERU_REFRESH))
+    dp.add_handler(
+        CallbackQueryHandler(memeru_save_callback, pattern=MEMERU_SAVE))
+    dp.add_handler(
+        CallbackQueryHandler(memeru_refresh_callback, pattern=MEMERU_REFRESH))
 
     # Game handlers
     dp.add_handler(CommandHandler('pidor', pidor_cmd, filters=ne))
