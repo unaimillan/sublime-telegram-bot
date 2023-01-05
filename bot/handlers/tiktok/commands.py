@@ -97,6 +97,12 @@ def tt_inline_cmd(update: Update, context: CallbackContext):
     results = [
         InlineQueryResultArticle(
             id=str(uuid4()),
+            title="Echo",
+            description="Just echo what you have typed",
+            input_message_content=InputTextMessageContent(query),
+        ),
+        InlineQueryResultArticle(
+            id=str(uuid4()),
             title='Caps',
             description='Make query text upper case',
             input_message_content=InputTextMessageContent(query.upper()),
