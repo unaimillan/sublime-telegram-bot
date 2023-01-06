@@ -87,6 +87,9 @@ def tt_inline_cmd(update: Update, context: CallbackContext):
     if not re.match(r'\s*https?://[vmtw.]{0,5}tiktok.com/.*', query):
         return
 
+    if 'tiktok_cache' not in context.bot_data:
+        context.bot_data['tiktok_cache'] = {}
+
     logging.debug(f'Processing inline query: {query}')
     if query not in context.bot_data['tiktok_cache']:
         try:
