@@ -11,7 +11,7 @@ from bot.handlers.meme.commands import meme_cmd, memeru_cmd, \
 from bot.handlers.meme.text_callback import MEME_REFRESH, MEMERU_REFRESH, \
     MEME_SAVE, MEMERU_SAVE
 from bot.handlers.misc.commands import hello_cmd, echo_cmd, slap_cmd, me_cmd, \
-    shrug_cmd, google_cmd, pin_message_cmd
+    shrug_cmd, google_cmd, pin_message_cmd, text_inline_cmd
 from bot.handlers.misc.error import bot_error_handler
 from bot.handlers.tiktok.commands import tt_video_cmd, tt_depersonalize_cmd, \
     tt_inline_cmd
@@ -29,7 +29,7 @@ def init_dispatcher(dp: Dispatcher):
     # Tiktok handlers
     dp.add_handler(CommandHandler('ttvideo', tt_video_cmd, filters=ne))
     dp.add_handler(CommandHandler('ttlink', tt_depersonalize_cmd, filters=ne))
-    dp.add_handler(InlineQueryHandler(tt_inline_cmd))
+    dp.add_handler(InlineQueryHandler(tt_inline_cmd, pattern=r'https://.+tiktok\.com.+'))
 
     # Meme handlers
     dp.add_handler(CommandHandler('meme', meme_cmd, filters=ne))
@@ -66,5 +66,6 @@ def init_dispatcher(dp: Dispatcher):
     dp.add_handler(CommandHandler('shrug', shrug_cmd, filters=ne))
     dp.add_handler(CommandHandler('google', google_cmd, filters=ne))
     dp.add_handler(CommandHandler('pin', pin_message_cmd, filters=ne))
+    dp.add_handler(InlineQueryHandler(text_inline_cmd))
 
     dp.add_error_handler(bot_error_handler)

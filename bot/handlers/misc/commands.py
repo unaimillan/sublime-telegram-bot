@@ -1,6 +1,9 @@
+import random
+import re
 from urllib.parse import quote as urlquote
+from uuid import uuid4
 
-from telegram import Update
+from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import CallbackContext
 
 from bot.utils import raw_name, escape_markdown2
@@ -55,3 +58,44 @@ def echo_cmd(update: Update, _context: CallbackContext):
 def unknown_command_cmd(update: Update, _context: CallbackContext):
     update.effective_message.reply_text(
         "sorry, this command isn't supported yet(")
+
+
+def text_inline_cmd(update: Update, context: CallbackContext):
+    query = update.inline_query.query
+
+    if query == "":
+        return
+
+    shuffled = []
+    # Split query by words using regex [a-zA-Z] for all languages
+    for word in re.split(r'([^\W\d_]{4,})', query):
+        if word.isalnum():
+            letters = word[1:-1]
+            res = word[0] + ''.join(random.sample(letters, len(letters))) + \
+                  word[-1]
+            shuffled.append(res)
+        else:
+            shuffled.append(word)
+
+    results = [
+        InlineQueryResultArticle(
+            id=str(uuid4()),
+            title="Echo",
+            description="Just echo what you have typed",
+            input_message_content=InputTextMessageContent(query),
+        ),
+        InlineQueryResultArticle(
+            id=str(uuid4()),
+            title='Caps',
+            description='Make query text upper case',
+            input_message_content=InputTextMessageContent(query.upper()),
+        ),
+        InlineQueryResultArticle(
+            id=str(uuid4()),
+            title='Shuffle',
+            description='Shuffle all the letters inside words',
+            input_message_content=InputTextMessageContent(''.join(shuffled))
+        )
+    ]
+
+    update.inline_query.answer(results, cache_time=0)
