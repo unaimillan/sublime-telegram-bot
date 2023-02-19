@@ -18,6 +18,7 @@ def get_tt_video_info(url: str, download=False) -> str | tuple[str, bytes]:
     with tempfile.TemporaryDirectory() as tmpdir:
         ydl_opts = {
             'quiet': True,
+            'outtmpl': '%(title).30s-%(id)s.%(ext)s',
             'paths': {
                 'home': tmpdir,
             }

@@ -31,7 +31,7 @@ def pidor_cmd(update: Update, context: CallbackContext):
     if winner_id:
         update.message.reply_markdown_v2(
             CURRENT_DAY_GAME_RESULT.format(
-                username=game.player_names[winner_id]))
+                username=escape_markdown2(game.player_names[winner_id])))
     else:
         winner_id = game.play()
         update.effective_chat.send_message(random.choice(stage1.phrases))
