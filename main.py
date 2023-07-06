@@ -2,6 +2,7 @@ import logging
 import os.path
 from os import getenv
 
+import sentry_sdk
 import telegram.ext
 from dotenv import load_dotenv
 from telegram.ext import Updater
@@ -20,6 +21,11 @@ load_dotenv()  # load telegram bot token from .env file
 API_TOKEN = getenv("TELEGRAM_BOT_API_SECRET", "")
 if not os.path.exists('storage'):
     os.mkdir('storage')
+
+sentry_sdk.init(
+    dsn=getenv("SENTRY_DSN", ""),
+    traces_sample_rate=1.0
+)
 
 updater = Updater(API_TOKEN, persistence=telegram.ext.PicklePersistence(
     filename='storage/data.bin'))

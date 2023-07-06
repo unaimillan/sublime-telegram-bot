@@ -3,6 +3,7 @@ import re
 import tempfile
 from uuid import uuid4
 
+import sentry_sdk
 import yt_dlp.utils
 from telegram import Update, InlineQueryResultArticle, \
     InputTextMessageContent, InlineKeyboardMarkup, \
@@ -36,30 +37,31 @@ def get_tt_video_info(url: str, download=False) -> str | tuple[str, bytes]:
 
 
 def tt_video_cmd(update: Update, context: CallbackContext) -> None:
-    source_url = ''
-    if context.args and len(context.args) == 1:
-        source_url = context.args[0]
-    elif update.effective_message.reply_to_message and len(
-            update.effective_message.reply_to_message.text) > 10:
-        source_url = update.effective_message.reply_to_message.text
-    else:
-        update.effective_message.reply_text(
-            "Provide a TikTok link after the command or reply to the link")
-        return
+    with sentry_sdk.start_transaction(op='tt_video_cmd', name='Download Tiktok video command'):
+        source_url = ''
+        if context.args and len(context.args) == 1:
+            source_url = context.args[0]
+        elif update.effective_message.reply_to_message and len(
+                update.effective_message.reply_to_message.text) > 10:
+            source_url = update.effective_message.reply_to_message.text
+        else:
+            update.effective_message.reply_text(
+                "Provide a TikTok link after the command or reply to the link")
+            return
 
-    try:
-        msg = update.effective_message.reply_text(PROCESSING_STARTED)
-        video_link, video_bytes = get_tt_video_info(source_url, download=True)
-        update.effective_message.reply_video(video_bytes,
-                                             reply_markup=InlineKeyboardMarkup([
-                                                 [
-                                                     InlineKeyboardButton(
-                                                         text='🔗',
-                                                         url=video_link)]]))
-        msg.delete()
-    except yt_dlp.utils.DownloadError:
-        update.effective_chat.send_message(
-            'Failed to process the link, please, try another one')
+        try:
+            msg = update.effective_message.reply_text(PROCESSING_STARTED)
+            video_link, video_bytes = get_tt_video_info(source_url, download=True)
+            update.effective_message.reply_video(video_bytes,
+                                                 reply_markup=InlineKeyboardMarkup([
+                                                     [
+                                                         InlineKeyboardButton(
+                                                             text='🔗',
+                                                             url=video_link)]]))
+            msg.delete()
+        except yt_dlp.utils.DownloadError:
+            update.effective_chat.send_message(
+                'Failed to process the link, please, try another one')
 
 
 def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
@@ -83,45 +85,46 @@ def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
 
 
 def tt_inline_cmd(update: Update, context: CallbackContext):
-    query = update.inline_query.query.strip()
+    with sentry_sdk.start_transaction(op='tt_inline_cmd', name='Download Tiktok video inline command'):
+        query = update.inline_query.query.strip()
 
-    if not re.match(r'\s*https?://[vmtw.]{0,5}tiktok.com/.*', query):
-        return
-
-    if 'tiktok_cache' not in context.bot_data:
-        context.bot_data['tiktok_cache'] = {}
-
-    logging.debug(f'Processing inline query: {query}')
-    if query not in context.bot_data['tiktok_cache']:
-        try:
-            video_link, video_bytes = get_tt_video_info(query, download=True)
-        except yt_dlp.utils.DownloadError:
-            update.inline_query.answer([])
+        if not re.match(r'\s*https?://[vmtw.]{0,5}tiktok.com/.*', query):
             return
 
-        # Special chat for uploading video to telegram servers
-        special_chat_id = -1001856672797
-        video_msg: Message = context.bot.send_video(special_chat_id,
-                                                    video_bytes, caption=video_link)
-        telegram_video_id = video_msg.video.file_id
-        context.bot_data['tiktok_cache'][query] = video_link, telegram_video_id
-    else:
-        video_link, telegram_video_id = context.bot_data['tiktok_cache'][query]
+        if 'tiktok_cache' not in context.bot_data:
+            context.bot_data['tiktok_cache'] = {}
 
-    results = [
-        InlineQueryResultArticle(
-            id=str(uuid4()),
-            title="Link",
-            description="Depersonalized link to the TikTok video",
-            input_message_content=InputTextMessageContent(video_link),
-        ),
-        InlineQueryResultCachedVideo(
-            id=str(uuid4()),
-            video_file_id=telegram_video_id,
-            title='Video',
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton(text='🔗', url=video_link)]]),
-        ),
-    ]
+        logging.debug(f'Processing inline query: {query}')
+        if query not in context.bot_data['tiktok_cache']:
+            try:
+                video_link, video_bytes = get_tt_video_info(query, download=True)
+            except yt_dlp.utils.DownloadError:
+                update.inline_query.answer([])
+                return
 
-    update.inline_query.answer(results, cache_time=24 * 60 * 60)
+            # Special chat for uploading video to telegram servers
+            special_chat_id = -1001856672797
+            video_msg: Message = context.bot.send_video(special_chat_id,
+                                                        video_bytes, caption=video_link)
+            telegram_video_id = video_msg.video.file_id
+            context.bot_data['tiktok_cache'][query] = video_link, telegram_video_id
+        else:
+            video_link, telegram_video_id = context.bot_data['tiktok_cache'][query]
+
+        results = [
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title="Link",
+                description="Depersonalized link to the TikTok video",
+                input_message_content=InputTextMessageContent(video_link),
+            ),
+            InlineQueryResultCachedVideo(
+                id=str(uuid4()),
+                video_file_id=telegram_video_id,
+                title='Video',
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton(text='🔗', url=video_link)]]),
+            ),
+        ]
+
+        update.inline_query.answer(results, cache_time=24 * 60 * 60)

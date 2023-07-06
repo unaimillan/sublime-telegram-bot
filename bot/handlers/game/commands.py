@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 
@@ -18,6 +19,7 @@ GAME_RESULT_TIME_DELAY = 2
 
 # PIDOR Game
 def pidor_cmd(update: Update, context: CallbackContext):
+    logging.info("Game of the day started")
     if 'game' in context.chat_data:
         game = Game.from_json(context.chat_data['game'])
     else:
@@ -47,6 +49,7 @@ def pidor_cmd(update: Update, context: CallbackContext):
 
 
 def pidorules_cmd(update: Update, _context: CallbackContext):
+    logging.info("Game rules requested")
     update.effective_chat.send_message(
         "Правила игры *Пидор Дня* \(только для групповых чатов\):\n"
         "*1\.* Зарегистрируйтесь в игру по команде */pidoreg*\n"
