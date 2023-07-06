@@ -17,10 +17,11 @@ class GamePlayer(SQLModel, table=True):
 
 class TGUser(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    tg_id: int
+    tg_id: int = Field(index=True, unique=True)
     username: Optional[str]
     first_name: str
     last_name: Optional[str]
+    lang_code: str = 'en'
     is_blocked: bool = False
 
     games: List['Game'] = Relationship(back_populates="players", link_model=GamePlayer)
