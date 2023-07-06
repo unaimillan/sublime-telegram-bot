@@ -5,13 +5,26 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
 
-class TUser(SQLModel, table=True):
+class GamePlayer(SQLModel, table=True):
+    game_id: Optional[int] = Field(default=None, foreign_key="game.id", primary_key=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="tguser.id", primary_key=True)
+    registered: bool = True
+
+    # user: 'TGUser' = Relationship(back_populates="games")
+    # game: 'Game' = Relationship(back_populates="players")
+    # winner_at: List['GameResult'] = Relationship(back_populates="winner")
+
+
+class TGUser(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tg_id: int
     username: Optional[str]
     first_name: str
     last_name: Optional[str]
     is_blocked: bool = False
+
+    games: List['Game'] = Relationship(back_populates="players", link_model=GamePlayer)
+    game_results: List['GameResult'] = Relationship(back_populates="winner")
 
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow,
@@ -22,30 +35,17 @@ class Game(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     chat_id: int
 
-    players: List['GamePlayer'] = Relationship(back_populates="game")
+    players: List[TGUser] = Relationship(back_populates="games", link_model=GamePlayer)
     results: List['GameResult'] = Relationship(back_populates="game")
-
-
-# TODO: Fix this Model for many-to-many relationship
-class GamePlayer(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    game_id: int = Field(foreign_key="game.id")
-    user_id: int = Field(foreign_key="tuser.id")
-    active: bool = True
-
-    user: TUser = Relationship(back_populates="players")
-    game: Game = Relationship(back_populates="players")
-    winner_at: List['GameResult'] = Relationship(back_populates="winner")
-
 
 class GameResult(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     game_id: int = Field(foreign_key="game.id")
-    winner_id: int = Field(foreign_key="gameplayer.id")
+    winner_id: int = Field(foreign_key="tguser.id")
     year: int
     day: int
 
-    winner: GamePlayer = Relationship(back_populates="winner_at")
+    winner: TGUser = Relationship(back_populates="game_results")
     game: Game = Relationship(back_populates="results")
 
     __table_args__ = (
@@ -55,10 +55,10 @@ class GameResult(SQLModel, table=True):
 
 class TiktokLink(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    link: str
-    share_link: Optional[str]
+    link: str = Field(index=True)
+    share_link: Optional[str] = Field(default=None, index=True)
     # ID of the message with the cached video inside special channel
-    telegram_message_id: Optional[int]
+    telegram_message_id: str
 
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow,
