@@ -5,6 +5,7 @@ from os import getenv
 import sentry_sdk
 import telegram.ext
 from dotenv import load_dotenv
+from sqlmodel import create_engine
 from telegram.ext import Updater
 
 from bot.dispatcher import init_dispatcher
@@ -27,12 +28,14 @@ sentry_sdk.init(
     traces_sample_rate=1.0
 )
 
+engine = create_engine(os.getenv("DATABASE_URL", "Error no db url provided"), echo=False)
+
 updater = Updater(API_TOKEN, persistence=telegram.ext.PicklePersistence(
     filename='storage/data.bin'))
 dispatch = updater.dispatcher
 
 # Setup dispatcher
-init_dispatcher(updater.dispatcher)
+init_dispatcher(updater.dispatcher, engine)
 
 # Run the bot
 updater.start_polling()

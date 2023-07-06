@@ -1,7 +1,12 @@
+from typing import Any
+
+from telegram import Update
 from telegram.ext import Dispatcher, CommandHandler, Filters, \
-    CallbackQueryHandler, InlineQueryHandler
+    CallbackQueryHandler, InlineQueryHandler, TypeHandler
 
 from bot.handlers.about.commands import about_cmd
+from bot.handlers.db.handlers import open_db_session, \
+    tg_user_middleware_handler, close_db_session_handler
 from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd, \
     pidorunreg_cmd, pidorstats_cmd, pidorall_cmd, pidorme_cmd
 from bot.handlers.kvstore.commands import get_cmd, set_cmd, del_cmd, list_cmd
@@ -19,9 +24,14 @@ from bot.handlers.tiktok.commands import tt_video_cmd, tt_depersonalize_cmd, \
 
 # TODO: Refactor this function to automatically scan for handlers ending with
 #  '_cmd' in the bot/handlers folder
-def init_dispatcher(dp: Dispatcher):
+def init_dispatcher(dp: Dispatcher, db_engine):
     """Register handlers."""
     ne = ~Filters.update.edited_message
+
+    # Middlewares setup
+    dp.add_handler(TypeHandler(Update, open_db_session(db_engine)), group=-100)
+    dp.add_handler(TypeHandler(Update, tg_user_middleware_handler), group=-99)
+    dp.add_handler(TypeHandler(Update, close_db_session_handler), group=100)
 
     # About handler
     dp.add_handler(CommandHandler('about', about_cmd, filters=ne))

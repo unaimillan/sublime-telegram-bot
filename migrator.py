@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from sqlmodel import create_engine, Session, SQLModel
 from telethon import TelegramClient
 
-from bot.app.models import TGUser, Game, GameResult, TiktokLink, GamePlayer
+from bot.app.models import TGUser, Game, GameResult, TiktokLink, GamePlayer, \
+    KVItem
 from bot.handlers.game.models import Game as RawGame
 
 load_dotenv()
@@ -88,12 +89,22 @@ def populate_tiktok_links():
             session.add(link)
             session.commit()
 
+def populate_kv_items():
+    with Session(engine) as session:
+        for chat_id, chat_data in raw_data['chat_data'].items():
+            if 'storage' in chat_data:
+                for k, v in chat_data['storage'].items():
+                    link = KVItem(chat_id=int(chat_id), key=k, value=v)
+                    session.add(link)
+        session.commit()
+
 
 if __name__ == '__main__':
     recreate_db()
     # populate_tiktok_links()
-    tg_user_ids = populate_tg_users()
-    populate_game()
+    # tg_user_ids = populate_tg_users()
+    # populate_game()
+    populate_kv_items()
 
     # client = TelegramClient('test', int(os.environ['TG_API_ID']),
     #                         os.environ['TG_API_HASH'])
