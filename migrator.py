@@ -13,6 +13,7 @@ from bot.handlers.game.models import Game as RawGame
 
 load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL", "Error no db url provided"), echo=False)
+# raw_data = pickle.load(open("storage/data.bin", "rb"))
 raw_data = pickle.load(open("storage/data.bin.backup2", "rb"))
 logging.info("All data loaded, sql engine created")
 
@@ -102,9 +103,9 @@ def populate_kv_items():
 if __name__ == '__main__':
     recreate_db()
     # populate_tiktok_links()
+    populate_kv_items()
     # tg_user_ids = populate_tg_users()
     # populate_game()
-    populate_kv_items()
 
     # client = TelegramClient('test', int(os.environ['TG_API_ID']),
     #                         os.environ['TG_API_HASH'])
