@@ -5,13 +5,17 @@ from uuid import uuid4
 
 import sentry_sdk
 import yt_dlp.utils
+from sqlalchemy import or_
 from telegram import Update, InlineQueryResultArticle, \
     InputTextMessageContent, InlineKeyboardMarkup, \
     InlineKeyboardButton, Message, InlineQueryResultCachedVideo
+from telegram.error import BadRequest
 from telegram.ext import CallbackContext
 from yt_dlp import YoutubeDL
 
+from bot.app.models import TiktokLink
 from bot.handlers.tiktok.text_static import PROCESSING_STARTED
+from bot.utils import ECallbackContext
 
 
 def get_tt_video_info(url: str, download=False) -> str | tuple[str, bytes]:
@@ -37,7 +41,8 @@ def get_tt_video_info(url: str, download=False) -> str | tuple[str, bytes]:
 
 
 def tt_video_cmd(update: Update, context: CallbackContext) -> None:
-    with sentry_sdk.start_transaction(op='tt_video_cmd', name='Download Tiktok video command'):
+    with sentry_sdk.start_transaction(op='tt_video_cmd',
+                                      name='Download Tiktok video command'):
         source_url = ''
         if context.args and len(context.args) == 1:
             source_url = context.args[0]
@@ -51,13 +56,15 @@ def tt_video_cmd(update: Update, context: CallbackContext) -> None:
 
         try:
             msg = update.effective_message.reply_text(PROCESSING_STARTED)
-            video_link, video_bytes = get_tt_video_info(source_url, download=True)
+            video_link, video_bytes = get_tt_video_info(source_url,
+                                                        download=True)
             update.effective_message.reply_video(video_bytes,
-                                                 reply_markup=InlineKeyboardMarkup([
+                                                 reply_markup=InlineKeyboardMarkup(
                                                      [
-                                                         InlineKeyboardButton(
-                                                             text='🔗',
-                                                             url=video_link)]]))
+                                                         [
+                                                             InlineKeyboardButton(
+                                                                 text='🔗',
+                                                                 url=video_link)]]))
             msg.delete()
         except yt_dlp.utils.DownloadError:
             update.effective_chat.send_message(
@@ -84,20 +91,22 @@ def tt_depersonalize_cmd(update: Update, context: CallbackContext) -> None:
             'Failed to process the link, please, try another one')
 
 
-def tt_inline_cmd(update: Update, context: CallbackContext):
-    with sentry_sdk.start_transaction(op='tt_inline_cmd', name='Download Tiktok video inline command'):
+def tt_inline_cmd(update: Update, context: ECallbackContext):
+    with sentry_sdk.start_transaction(op='tt_inline_cmd',
+                                      name='Download Tiktok video inline command'):
         query = update.inline_query.query.strip()
 
         if not re.match(r'\s*https?://[vmtw.]{0,5}tiktok.com/.*', query):
             return
 
-        if 'tiktok_cache' not in context.bot_data:
-            context.bot_data['tiktok_cache'] = {}
-
         logging.debug(f'Processing inline query: {query}')
-        if query not in context.bot_data['tiktok_cache']:
+        tt_cache: TiktokLink = context.db_session.query(TiktokLink).filter(
+            or_(TiktokLink.link == query,
+                TiktokLink.share_link == query)).one_or_none()
+        if tt_cache is None:
             try:
-                video_link, video_bytes = get_tt_video_info(query, download=True)
+                video_link, video_bytes = get_tt_video_info(query,
+                                                            download=True)
             except yt_dlp.utils.DownloadError:
                 update.inline_query.answer([])
                 return
@@ -105,11 +114,14 @@ def tt_inline_cmd(update: Update, context: CallbackContext):
             # Special chat for uploading video to telegram servers
             special_chat_id = -1001856672797
             video_msg: Message = context.bot.send_video(special_chat_id,
-                                                        video_bytes, caption=video_link)
+                                                        video_bytes,
+                                                        caption=video_link)
             telegram_video_id = video_msg.video.file_id
-            context.bot_data['tiktok_cache'][query] = video_link, telegram_video_id
+            context.db_session.add(TiktokLink(link=video_link, share_link=query,
+                                              telegram_message_id=telegram_video_id))
+            context.db_session.commit()
         else:
-            video_link, telegram_video_id = context.bot_data['tiktok_cache'][query]
+            video_link, telegram_video_id = tt_cache.link, tt_cache.telegram_message_id
 
         results = [
             InlineQueryResultArticle(
@@ -127,4 +139,13 @@ def tt_inline_cmd(update: Update, context: CallbackContext):
             ),
         ]
 
-        update.inline_query.answer(results, cache_time=24 * 60 * 60)
+        try:
+            update.inline_query.answer(results, cache_time=0)#24 * 60 * 60)
+        except BadRequest as e:
+            if str(e) == 'Document_invalid':
+                context.db_session.delete(tt_cache)
+                context.db_session.commit()
+                logging.info(f'Invalid video file, deleting from cache')
+            else:
+                logging.error(f'Error while answering inline query: {str(e)}')
+                raise e
