@@ -1,8 +1,8 @@
 """Initial
 
-Revision ID: b4e8fb3cc5e0
+Revision ID: a8ac3c2ed821
 Revises: 
-Create Date: 2023-07-07 01:35:13.403640
+Create Date: 2023-07-08 04:42:49.267548
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision = 'b4e8fb3cc5e0'
+revision = 'a8ac3c2ed821'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,6 +46,7 @@ def upgrade() -> None:
     sa.Column('is_blocked', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('last_seen_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tguser_tg_id'), 'tguser', ['tg_id'], unique=True)
@@ -63,7 +64,6 @@ def upgrade() -> None:
     op.create_table('gameplayer',
     sa.Column('game_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('registered', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['game_id'], ['game.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['tguser.id'], ),
     sa.PrimaryKeyConstraint('game_id', 'user_id')
