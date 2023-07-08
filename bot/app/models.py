@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Column, BigInteger
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -16,7 +16,7 @@ class GamePlayer(SQLModel, table=True):
 
 class TGUser(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    tg_id: int = Field(index=True, unique=True)
+    tg_id: int = Field(sa_column=Column('tg_id', BigInteger(), nullable=False, index=True, unique=True))
     username: Optional[str]
     first_name: str
     last_name: Optional[str]
@@ -41,7 +41,7 @@ class TGUser(SQLModel, table=True):
 
 class Game(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    chat_id: int
+    chat_id: int = Field(sa_column=Column('chat_id', BigInteger(), nullable=False, index=True))
 
     players: List[TGUser] = Relationship(back_populates="games", link_model=GamePlayer)
     results: List['GameResult'] = Relationship(back_populates="game")
@@ -76,7 +76,7 @@ class TiktokLink(SQLModel, table=True):
 
 class KVItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    chat_id: int = Field(index=True)
+    chat_id: int = Field(sa_column=Column(BigInteger(), nullable=False, index=True))
     key: str = Field(index=True)
     value: str
 
