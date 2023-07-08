@@ -55,9 +55,9 @@ def pidor_cmd(update: Update, context: GECallbackContext):
     logging.info("Game of the day started")
     players: List[TGUser] = context.game.players
 
-    # if len(players) < 2:
-    #     update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
-    #     return
+    if len(players) < 2:
+        update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
+        return
 
     cur_year, cur_day = current_year_day()
     game_result: GameResult = context.db_session.query(GameResult).filter_by(game_id=context.game.id, year=cur_year, day=cur_day).one_or_none()
