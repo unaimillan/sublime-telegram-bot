@@ -2,9 +2,11 @@ import asyncio
 import logging
 import os
 import pickle
+from typing import List
 
 from dotenv import load_dotenv
-from sqlmodel import create_engine, Session, SQLModel
+from sqlalchemy import func, text
+from sqlmodel import create_engine, Session, SQLModel, select
 from telethon import TelegramClient
 
 from bot.app.models import TGUser, Game, GameResult, TiktokLink, GamePlayer, \
@@ -14,7 +16,7 @@ from bot.handlers.game.models import Game as RawGame
 load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL", "Error no db url provided"), echo=False)
 # raw_data = pickle.load(open("storage/data.bin", "rb"))
-raw_data = pickle.load(open("storage/data.bin.backup2", "rb"))
+raw_data = pickle.load(open("storage/data.bin.backup3", "rb"))
 logging.info("All data loaded, sql engine created")
 
 
@@ -46,7 +48,8 @@ def populate_tg_users() -> list[int]:
             session.commit()
     return list(users)
 
-async def get_user_id_info(client, tg_ids: [int]):
+
+async def get_user_id_info(client, tg_ids: List[int]):
     # me = await client.get_me()
     # print(me.stringify())
     for tg_id in tg_ids:
@@ -74,8 +77,7 @@ def populate_game():
             session.commit()
             session.refresh(game)
             for player in raw_game.players:
-                game_player = GamePlayer(game_id=game.id, user_id=player)
-                session.add(game_player)
+                game.players.append(session.query(TGUser).filter_by(tg_id=player).one())
             for year in raw_game.years:
                 for day, winner in raw_game.years[year].items():
                     game_result = GameResult(game_id=game.id, year=year, day=day, winner_id=winner)
@@ -90,6 +92,7 @@ def populate_tiktok_links():
             session.add(link)
             session.commit()
 
+
 def populate_kv_items():
     with Session(engine) as session:
         for chat_id, chat_data in raw_data['chat_data'].items():
@@ -101,11 +104,19 @@ def populate_kv_items():
 
 
 if __name__ == '__main__':
-    recreate_db()
+    # recreate_db()
     # populate_tiktok_links()
-    populate_kv_items()
+    # populate_kv_items()
     # tg_user_ids = populate_tg_users()
     # populate_game()
+
+    with Session(engine) as session:
+        tg_id = 123456
+        user: TGUser = session.query(TGUser).filter_by(tg_id=tg_id).one()
+        game: Game = session.query(Game).filter_by(id=2).one()
+        print(user.full_username())
+        print(user.games)
+        print(len(game.players))
 
     # client = TelegramClient('test', int(os.environ['TG_API_ID']),
     #                         os.environ['TG_API_HASH'])

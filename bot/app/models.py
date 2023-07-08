@@ -8,7 +8,6 @@ from sqlmodel import SQLModel, Field, Relationship
 class GamePlayer(SQLModel, table=True):
     game_id: Optional[int] = Field(default=None, foreign_key="game.id", primary_key=True)
     user_id: Optional[int] = Field(default=None, foreign_key="tguser.id", primary_key=True)
-    registered: bool = True
 
     # user: 'TGUser' = Relationship(back_populates="games")
     # game: 'Game' = Relationship(back_populates="players")
@@ -30,6 +29,14 @@ class TGUser(SQLModel, table=True):
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow,
                                  nullable=False)
+    last_seen_at: datetime = Field(default=datetime.utcnow(), nullable=False)
+
+    def full_username(self, mention: bool = False, prefix: str = '@'):
+        if self.username:
+            return (prefix if mention else '') + self.username
+        else:
+            # Add mention handling with `[{first_name}{" "+last_name}](tg://user?id={tg_id})`
+            return self.first_name + (" " + self.last_name if self.last_name else '')
 
 
 class Game(SQLModel, table=True):
@@ -38,6 +45,7 @@ class Game(SQLModel, table=True):
 
     players: List[TGUser] = Relationship(back_populates="games", link_model=GamePlayer)
     results: List['GameResult'] = Relationship(back_populates="game")
+
 
 class GameResult(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -64,6 +72,7 @@ class TiktokLink(SQLModel, table=True):
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow,
                                  nullable=False)
+
 
 class KVItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
