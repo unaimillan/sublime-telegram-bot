@@ -23,10 +23,10 @@ API_TOKEN = getenv("TELEGRAM_BOT_API_SECRET", "")
 if not os.path.exists('storage'):
     os.mkdir('storage')
 
-# sentry_sdk.init(
-#     dsn=getenv("SENTRY_DSN", ""),
-#     traces_sample_rate=1.0
-# )
+sentry_sdk.init(
+    dsn=getenv("SENTRY_DSN", ""),
+    traces_sample_rate=1.0
+)
 
 engine = create_engine(os.getenv("DATABASE_URL", "Error no db url provided"), echo=False)
 
