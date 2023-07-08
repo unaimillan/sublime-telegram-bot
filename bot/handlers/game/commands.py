@@ -1,39 +1,75 @@
+import functools
+import logging
 import random
 import time
+from datetime import datetime
+from typing import List
+from zoneinfo import ZoneInfo
 
+from sqlalchemy import func, text
+from sqlmodel import select
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 
-from bot.handlers.game.models import Game
+from bot.app.models import Game, GamePlayer, TGUser, GameResult
 from bot.handlers.game.phrases import stage1, stage2, stage3, stage4
 from bot.handlers.game.text_static import STATS_PERSONAL, \
     STATS_CURRENT_YEAR, \
     STATS_ALL_TIME, STATS_LIST_ITEM, REGISTRATION_SUCCESS, \
     ERROR_ALREADY_REGISTERED, ERROR_ZERO_PLAYERS, ERROR_NOT_ENOUGH_PLAYERS, \
-    REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT
-from bot.utils import escape_markdown2
+    REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT, REMOVE_REGISTRATION_ERROR
+from bot.utils import escape_markdown2, ECallbackContext
 
 GAME_RESULT_TIME_DELAY = 2
 
+MOSCOW_TZ = ZoneInfo('Europe/Moscow')
+
+
+def current_year_day():
+    now = datetime.now(tz=MOSCOW_TZ)
+    return now.year, now.timetuple().tm_yday
+
+
+class GECallbackContext(ECallbackContext):
+    """Extended bot context with additional game `Game` field"""
+    game: Game
+
+
+def ensure_game(func):
+    def wrapper(update: Update, context: ECallbackContext):
+        game: Game = context.db_session.query(Game).filter_by(chat_id=update.effective_chat.id).one_or_none()
+        if game is None:
+            game = Game(chat_id=update.effective_chat.id)
+            context.db_session.add(game)
+            context.db_session.commit()
+            context.db_session.refresh(game)
+        context.game = game
+        return func(update, context)
+
+    return wrapper
+
 
 # PIDOR Game
-def pidor_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
-    else:
-        game = Game()
+@ensure_game
+def pidor_cmd(update: Update, context: GECallbackContext):
+    logging.info("Game of the day started")
+    players: List[TGUser] = context.game.players
 
-    if len(game.players) < 2:
-        update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
-        return
+    # if len(players) < 2:
+    #     update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
+    #     return
 
-    winner_id: int = game.check_winner()
-    if winner_id:
+    cur_year, cur_day = current_year_day()
+    game_result: GameResult = context.db_session.query(GameResult).filter_by(game_id=context.game.id, year=cur_year, day=cur_day).one_or_none()
+    if game_result:
         update.message.reply_markdown_v2(
             CURRENT_DAY_GAME_RESULT.format(
-                username=escape_markdown2(game.player_names[winner_id])))
+                username=escape_markdown2(game_result.winner.full_username())))
     else:
-        winner_id = game.play()
+        winner: TGUser = random.choice(players)
+        context.game.results.append(GameResult(game_id=context.game.id, year=cur_year, day=cur_day, winner=winner))
+        context.db_session.commit()
+
         update.effective_chat.send_message(random.choice(stage1.phrases))
         time.sleep(GAME_RESULT_TIME_DELAY)
         update.effective_chat.send_message(random.choice(stage2.phrases))
@@ -41,12 +77,11 @@ def pidor_cmd(update: Update, context: CallbackContext):
         update.effective_chat.send_message(random.choice(stage3.phrases))
         time.sleep(GAME_RESULT_TIME_DELAY)
         update.effective_chat.send_message(random.choice(stage4.phrases).format(
-            username='@' + game.player_names[winner_id]))
-
-    context.chat_data['game'] = game.to_json()
+            username=winner.full_username(mention=True)))
 
 
 def pidorules_cmd(update: Update, _context: CallbackContext):
+    logging.info("Game rules requested")
     update.effective_chat.send_message(
         "Правила игры *Пидор Дня* \(только для групповых чатов\):\n"
         "*1\.* Зарегистрируйтесь в игру по команде */pidoreg*\n"
@@ -65,79 +100,82 @@ def pidorules_cmd(update: Update, _context: CallbackContext):
         , parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
 
 
-def pidoreg_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
-    else:
-        game = Game()
+@ensure_game
+def pidoreg_cmd(update: Update, context: GECallbackContext):
+    players: List[TGUser] = context.game.players
 
-    if len(game.players) == 0:
+    if len(players) == 0:
         update.effective_chat.send_message(
             ERROR_ZERO_PLAYERS.format(username=update.message.from_user.name))
 
-    if game.add_player(update.message.from_user):
+    if context.tg_user not in context.game.players:
+        context.game.players.append(context.tg_user)
+        context.db_session.commit()
         update.effective_message.reply_markdown_v2(REGISTRATION_SUCCESS)
     else:
         update.effective_message.reply_markdown_v2(ERROR_ALREADY_REGISTERED)
 
-    context.chat_data['game'] = game.to_json()
 
-
-def pidorunreg_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
+@ensure_game
+def pidorunreg_cmd(update: Update, context: GECallbackContext):
+    if context.tg_user in context.game.players:
+        context.game.players.remove(context.tg_user)
+        context.db_session.commit()
+        update.effective_message.reply_markdown_v2(REMOVE_REGISTRATION)
     else:
-        game = Game()
-
-    game.remove_player(update.effective_message.from_user)
-    update.effective_message.reply_markdown_v2(REMOVE_REGISTRATION)
-
-    context.chat_data['game'] = game.to_json()
+        update.effective_message.reply_markdown_v2(REMOVE_REGISTRATION_ERROR)
 
 
-def get_sorted_list_text(player_list: list[(str, int)]) -> str:
+def build_player_table(player_list: list[tuple[TGUser, int]]) -> str:
     result = []
-    for number, (name, amount) in enumerate(player_list, 1):
+    for number, (tg_user, amount) in enumerate(player_list, 1):
         result.append(STATS_LIST_ITEM.format(number=number,
-                                             username=escape_markdown2(name),
+                                             username=escape_markdown2(tg_user.full_username()),
                                              amount=amount))
     return ''.join(result)
 
 
-def pidorstats_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
-    else:
-        game = Game()
+@ensure_game
+def pidorstats_cmd(update: Update, context: GECallbackContext):
+    cur_year, _ = current_year_day()
+    stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
+        .join(TGUser, GameResult.winner_id == TGUser.id) \
+        .filter(GameResult.game_id == context.game.id, GameResult.year == cur_year) \
+        .group_by(GameResult.winner_id) \
+        .order_by(text('count DESC'))
+    db_results = context.db_session.exec(stmt).all()
 
-    results = game.stats_current_year()
-    player_stats = get_sorted_list_text(results)
-    answer = STATS_CURRENT_YEAR.format(player_stats=player_stats,
-                                       player_count=len(game.players))
+    player_table = build_player_table(db_results)
+    answer = STATS_CURRENT_YEAR.format(player_stats=player_table,
+                                       player_count=len(context.game.players))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
 
 
-def pidorall_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
-    else:
-        game = Game()
+@ensure_game
+def pidorall_cmd(update: Update, context: GECallbackContext):
+    stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
+        .join(TGUser, GameResult.winner_id == TGUser.id) \
+        .filter(GameResult.game_id == context.game.id) \
+        .group_by(GameResult.winner_id) \
+        .order_by(text('count DESC'))
+    db_results = context.db_session.exec(stmt).all()
 
-    results = game.stats_all_time()
-    player_stats = get_sorted_list_text(results)
-    answer = STATS_ALL_TIME.format(player_stats=player_stats,
-                                   player_count=len(game.players))
+    player_table = build_player_table(db_results)
+    answer = STATS_ALL_TIME.format(player_stats=player_table,
+                                       player_count=len(context.game.players))
     update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
 
 
-def pidorme_cmd(update: Update, context: CallbackContext):
-    if 'game' in context.chat_data:
-        game = Game.from_json(context.chat_data['game'])
-    else:
-        game = Game()
+@ensure_game
+def pidorme_cmd(update: Update, context: GECallbackContext):
+    cur_year, _ = current_year_day()
+    stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
+        .join(TGUser, GameResult.winner_id == TGUser.id) \
+        .filter(GameResult.game_id == context.game.id, GameResult.winner_id == context.tg_user.id) \
+        .group_by(GameResult.winner_id) \
+        .order_by(text('count DESC'))
+    tg_user, count = context.db_session.exec(stmt).one()
 
-    user_id = update.effective_message.from_user.id
-    count = game.stats_personal(user_id)
     update.effective_chat.send_message(STATS_PERSONAL.format(
-        username=update.effective_user.name, amount=count),
+        username=tg_user.full_username(), amount=count),
         parse_mode=ParseMode.MARKDOWN_V2)

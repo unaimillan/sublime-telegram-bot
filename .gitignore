@@ -133,3 +133,6 @@ dmypy.json
 
 # Project storage folder
 storage
+*.db
+*.session
+*.sql
