@@ -14,8 +14,10 @@ config = context.config
 
 # Setup dynamic database url
 load_dotenv()
-config.set_main_option("sqlalchemy.url",
-                       os.getenv("DATABASE_URL", "Error no db url provided"))
+dburi = os.getenv("DATABASE_URL", "Error no db url provided")
+if dburi and dburi.startswith("postgres://"):
+    uri = dburi.replace("postgres://", "postgresql://", 1)
+config.set_main_option("sqlalchemy.url", dburi)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
