@@ -28,7 +28,10 @@ sentry_sdk.init(
     traces_sample_rate=1.0
 )
 
-engine = create_engine(os.getenv("DATABASE_URL", "Error no db url provided"), echo=False)
+dburi = os.getenv("DATABASE_URL", "Error no db url provided")  # or other relevant config var
+if dburi and dburi.startswith("postgres://"):
+    uri = dburi.replace("postgres://", "postgresql://", 1)
+engine = create_engine(dburi, echo=False)
 
 updater = Updater(API_TOKEN, persistence=telegram.ext.PicklePersistence(
     filename='storage/data.bin'))
