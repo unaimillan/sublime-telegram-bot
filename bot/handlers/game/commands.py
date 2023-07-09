@@ -141,7 +141,7 @@ def pidorstats_cmd(update: Update, context: GECallbackContext):
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id, GameResult.year == cur_year) \
-        .group_by(GameResult.winner_id) \
+        .group_by(TGUser) \
         .order_by(text('count DESC'))
     db_results = context.db_session.exec(stmt).all()
 
@@ -156,7 +156,7 @@ def pidorall_cmd(update: Update, context: GECallbackContext):
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id) \
-        .group_by(GameResult.winner_id) \
+        .group_by(TGUser) \
         .order_by(text('count DESC'))
     db_results = context.db_session.exec(stmt).all()
 
@@ -172,7 +172,7 @@ def pidorme_cmd(update: Update, context: GECallbackContext):
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id, GameResult.winner_id == context.tg_user.id) \
-        .group_by(GameResult.winner_id) \
+        .group_by(TGUser) \
         .order_by(text('count DESC'))
     tg_user, count = context.db_session.exec(stmt).one()
 

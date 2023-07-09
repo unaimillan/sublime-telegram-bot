@@ -29,7 +29,8 @@ def tg_user_middleware_handler(update: Update, context: ECallbackContext):
         if tg_user.last_name != update.effective_user.last_name:
             tg_user.last_name = update.effective_user.last_name
             updated = True
-        if tg_user.lang_code != update.effective_user.language_code:
+        if update.effective_user.language_code is not None \
+                and tg_user.lang_code != update.effective_user.language_code:
             tg_user.lang_code = update.effective_user.language_code
             updated = True
         if updated:
