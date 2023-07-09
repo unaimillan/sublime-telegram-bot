@@ -52,7 +52,7 @@ def ensure_game(func):
 # PIDOR Game
 @ensure_game
 def pidor_cmd(update: Update, context: GECallbackContext):
-    logging.info("Game of the day started")
+    logging.info(f"Game {context.game.id} of the day started")
     players: List[TGUser] = context.game.players
 
     if len(players) < 2:
