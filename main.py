@@ -25,7 +25,8 @@ if not os.path.exists('storage'):
 
 sentry_sdk.init(
     dsn=getenv("SENTRY_DSN", ""),
-    traces_sample_rate=1.0
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0
 )
 
 dburi = os.getenv("DATABASE_URL", "Error no db url provided")  # or other relevant config var

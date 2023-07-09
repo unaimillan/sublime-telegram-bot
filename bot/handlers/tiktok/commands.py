@@ -140,7 +140,7 @@ def tt_inline_cmd(update: Update, context: ECallbackContext):
         ]
 
         try:
-            update.inline_query.answer(results, cache_time=0)#24 * 60 * 60)
+            update.inline_query.answer(results, cache_time=24 * 60 * 60)
         except BadRequest as e:
             if str(e) == 'Document_invalid':
                 context.db_session.delete(tt_cache)
