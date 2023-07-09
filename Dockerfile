@@ -15,9 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY bot ./bot/
 COPY main.py .
+COPY migrations ./migrations/
+COPY alembic.ini .
+
 RUN mkdir storage && \
     chown app:app storage
 
 USER app
 
-CMD ["python3", "main.py"]
+CMD alembic upgrade head && python3 main.py

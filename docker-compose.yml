@@ -1,12 +1,19 @@
 version: "3.8"
 services:
   telegram-bot:
-    image: unaimillan/telegram-bot:v1.3.4
+#    image: unaimillan/telegram-bot:v1.3.4
+    build:
+      context: .
+      tags:
+        - unaimillan/telegram-bot:v1.4.0
     restart: on-failure
+    depends_on: [postgres]
     volumes:
       - ./storage:/app/storage
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stb_db
     logging:
       driver: "json-file"
       options:

@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  telegram-bot:
+    image: unaimillan/telegram-bot:v1.3.4
+    restart: on-failure
+    volumes:
+      - ./storage:/app/storage
+    env_file:
+      - .env
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1G"
+        max-file: "10"
