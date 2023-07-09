@@ -1,3 +1,3 @@
-web: python3 main.py
+bot: python3 main.py
 
 release: alembic upgrade head
