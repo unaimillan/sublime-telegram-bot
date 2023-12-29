@@ -149,7 +149,7 @@ def pidoryearresults_cmd(update: Update, context: GECallbackContext):
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id, GameResult.year == result_year) \
-        .group_by(GameResult.winner_id) \
+        .group_by(TGUser) \
         .order_by(text('count DESC')) \
         .limit(50)
     db_results = context.db_session.exec(stmt).all()
