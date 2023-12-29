@@ -1,14 +1,13 @@
-from typing import Any
-
 from telegram import Update
 from telegram.ext import Dispatcher, CommandHandler, Filters, \
-    CallbackQueryHandler, InlineQueryHandler, TypeHandler
+    CallbackQueryHandler, InlineQueryHandler, TypeHandler, MessageHandler
 
 from bot.handlers.about.commands import about_cmd
 from bot.handlers.db.handlers import open_db_session, \
     tg_user_middleware_handler, close_db_session_handler
 from bot.handlers.game.commands import pidor_cmd, pidorules_cmd, pidoreg_cmd, \
-    pidorunreg_cmd, pidorstats_cmd, pidorall_cmd, pidorme_cmd
+    pidorunreg_cmd, pidorstats_cmd, pidorall_cmd, pidorme_cmd, \
+    pidoryearresults_cmd
 from bot.handlers.kvstore.commands import get_cmd, set_cmd, del_cmd, list_cmd
 from bot.handlers.meme.commands import meme_cmd, memeru_cmd, \
     meme_refresh_callback, memeru_refresh_callback, meme_save_callback, \
@@ -54,6 +53,7 @@ def init_dispatcher(dp: Dispatcher, db_engine):
 
     # Game handlers
     dp.add_handler(CommandHandler('pidor', pidor_cmd, filters=ne))
+    dp.add_handler(MessageHandler(Filters.regex(r'/pidor\d\d\d\d(?:@.+)?')&ne, pidoryearresults_cmd))
     dp.add_handler(
         CommandHandler('pidorules', pidorules_cmd, filters=ne))
     dp.add_handler(CommandHandler('pidoreg', pidoreg_cmd, filters=ne))

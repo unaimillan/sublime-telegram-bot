@@ -17,7 +17,8 @@ from bot.handlers.game.text_static import STATS_PERSONAL, \
     STATS_CURRENT_YEAR, \
     STATS_ALL_TIME, STATS_LIST_ITEM, REGISTRATION_SUCCESS, \
     ERROR_ALREADY_REGISTERED, ERROR_ZERO_PLAYERS, ERROR_NOT_ENOUGH_PLAYERS, \
-    REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT, REMOVE_REGISTRATION_ERROR
+    REMOVE_REGISTRATION, CURRENT_DAY_GAME_RESULT, REMOVE_REGISTRATION_ERROR, \
+    YEAR_RESULTS_MSG, YEAR_RESULTS_ANNOUNCEMENT
 from bot.utils import escape_markdown2, ECallbackContext
 
 GAME_RESULT_TIME_DELAY = 2
@@ -25,9 +26,8 @@ GAME_RESULT_TIME_DELAY = 2
 MOSCOW_TZ = ZoneInfo('Europe/Moscow')
 
 
-def current_year_day():
-    now = datetime.now(tz=MOSCOW_TZ)
-    return now.year, now.timetuple().tm_yday
+def current_datetime():
+    return datetime.now(tz=MOSCOW_TZ)
 
 
 class GECallbackContext(ECallbackContext):
@@ -59,7 +59,10 @@ def pidor_cmd(update: Update, context: GECallbackContext):
         update.effective_chat.send_message(ERROR_NOT_ENOUGH_PLAYERS)
         return
 
-    cur_year, cur_day = current_year_day()
+    current_dt = current_datetime()
+    cur_year, cur_day = current_dt.year, current_dt.timetuple().tm_yday
+    last_day = current_dt.month == 12 and current_dt.day >= 31
+
     game_result: GameResult = context.db_session.query(GameResult).filter_by(game_id=context.game.id, year=cur_year, day=cur_day).one_or_none()
     if game_result:
         update.message.reply_markdown_v2(
@@ -69,6 +72,9 @@ def pidor_cmd(update: Update, context: GECallbackContext):
         winner: TGUser = random.choice(players)
         context.game.results.append(GameResult(game_id=context.game.id, year=cur_year, day=cur_day, winner=winner))
         context.db_session.commit()
+
+        if last_day:
+            update.effective_chat.send_message(YEAR_RESULTS_ANNOUNCEMENT.format(year=cur_year), parse_mode=ParseMode.MARKDOWN_V2)
 
         update.effective_chat.send_message(random.choice(stage1.phrases))
         time.sleep(GAME_RESULT_TIME_DELAY)
@@ -136,13 +142,38 @@ def build_player_table(player_list: list[tuple[TGUser, int]]) -> str:
 
 
 @ensure_game
+def pidoryearresults_cmd(update: Update, context: GECallbackContext):
+    cur_year = current_datetime().year
+    result_year:int = int(update.effective_message.text.removeprefix('/pidor')[:4])
+
+    stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
+        .join(TGUser, GameResult.winner_id == TGUser.id) \
+        .filter(GameResult.game_id == context.game.id, GameResult.year == result_year) \
+        .group_by(GameResult.winner_id) \
+        .order_by(text('count DESC')) \
+        .limit(50)
+    db_results = context.db_session.exec(stmt).all()
+
+    if len(db_results) == 0:
+        update.effective_chat.send_message(
+            ERROR_ZERO_PLAYERS.format(
+                username=update.message.from_user.name))
+        return
+
+    player_table = build_player_table(db_results)
+    answer = YEAR_RESULTS_MSG.format(username=escape_markdown2(db_results[0][0].full_username()), year=result_year, player_list=player_table)
+    update.effective_chat.send_message(answer, parse_mode=ParseMode.MARKDOWN_V2)
+
+
+@ensure_game
 def pidorstats_cmd(update: Update, context: GECallbackContext):
-    cur_year, _ = current_year_day()
+    cur_year = current_datetime().year
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id, GameResult.year == cur_year) \
         .group_by(TGUser) \
-        .order_by(text('count DESC'))
+        .order_by(text('count DESC')) \
+        .limit(10)
     db_results = context.db_session.exec(stmt).all()
 
     player_table = build_player_table(db_results)
@@ -157,7 +188,8 @@ def pidorall_cmd(update: Update, context: GECallbackContext):
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id) \
         .group_by(TGUser) \
-        .order_by(text('count DESC'))
+        .order_by(text('count DESC')) \
+        .limit(10)
     db_results = context.db_session.exec(stmt).all()
 
     player_table = build_player_table(db_results)
@@ -168,7 +200,7 @@ def pidorall_cmd(update: Update, context: GECallbackContext):
 
 @ensure_game
 def pidorme_cmd(update: Update, context: GECallbackContext):
-    cur_year, _ = current_year_day()
+    cur_year = current_datetime().year
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
         .filter(GameResult.game_id == context.game.id, GameResult.winner_id == context.tg_user.id) \
