@@ -61,7 +61,7 @@ def pidor_cmd(update: Update, context: GECallbackContext):
 
     current_dt = current_datetime()
     cur_year, cur_day = current_dt.year, current_dt.timetuple().tm_yday
-    last_day = current_dt.month == 12 and current_dt.day >= 30
+    last_day = current_dt.month == 12 and current_dt.day >= 31
 
     game_result: GameResult = context.db_session.query(GameResult).filter_by(game_id=context.game.id, year=cur_year, day=cur_day).one_or_none()
     if game_result:
@@ -143,8 +143,17 @@ def build_player_table(player_list: list[tuple[TGUser, int]]) -> str:
 
 @ensure_game
 def pidoryearresults_cmd(update: Update, context: GECallbackContext):
-    cur_year = current_datetime().year
     result_year:int = int(update.effective_message.text.removeprefix('/pidor')[:4])
+
+    cur_dt = current_datetime()
+    if cur_dt.year == result_year and not (cur_dt.month == 12 and cur_dt.day == 31):
+        update.effective_chat.send_message("Время ещё не пришло! Возвращайтесь 31 декабря;)")
+        return
+
+    if result_year > cur_dt.year:
+        update.effective_chat.send_message(
+            "Данные за этот год отсутствуют. Рановато ещё!")
+        return
 
     stmt = select(TGUser, func.count(GameResult.winner_id).label('count')) \
         .join(TGUser, GameResult.winner_id == TGUser.id) \
