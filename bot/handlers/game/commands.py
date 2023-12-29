@@ -61,7 +61,7 @@ def pidor_cmd(update: Update, context: GECallbackContext):
 
     current_dt = current_datetime()
     cur_year, cur_day = current_dt.year, current_dt.timetuple().tm_yday
-    last_day = current_dt.month == 12 and current_dt.day >= 31
+    last_day = current_dt.month == 12 and current_dt.day >= 30
 
     game_result: GameResult = context.db_session.query(GameResult).filter_by(game_id=context.game.id, year=cur_year, day=cur_day).one_or_none()
     if game_result:
