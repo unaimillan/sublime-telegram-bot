@@ -40,4 +40,4 @@ tzdata==2023.3
 tzlocal==5.2
 urllib3==2.1.0
 websockets==12.0
-yt-dlp==2023.11.16
+yt-dlp==2024.3.10
